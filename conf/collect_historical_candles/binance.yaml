@@ -1,0 +1,13 @@
+exhange_kwargs:
+    class: Binance
+    symbols: [BTC-USDT, ETH-USDT]
+    config: 
+        log: {filename: demo.log, level: DEBUG, disabled: False}
+candles_kwargs:
+    method: candles_sync 
+    interval: 1h
+    start: "2023-08-01T00:00:00"
+    # end: "2023-08-25T02:00:00"
+    end: ~  # Now
+    retry_count: 1
+    retry_delay: 60

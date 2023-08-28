@@ -1,0 +1,53 @@
+version: '3.3'
+
+services:
+  influxdb-cryptofeed:
+    image: influxdb:2.7.1
+    networks:
+      - influxdb-cryptofeed
+    volumes:
+      # Mount for influxdb data directory and configuration
+      - influxdb-cryptofeed:/var/lib/influxdb2:rw
+      - influxdb-cryptofeed-config:/etc/influxdb2:rw
+      - ./influxdb/influxdb.toml:/etc/influxdb2/influxdb.toml
+      - ./influxdb-selfsigned.crt:/etc/ssl/influxdb-selfsigned.crt:rw
+      - ./influxdb-selfsigned.key:/etc/ssl/influxdb-selfsigned.key:rw
+    env_file:
+      - ./influxdb/.env
+      - ./influxdb/.env.secret
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      # - DOCKER_INFLUXDB_INIT_RETENTION=1h
+      - DOCKER_INFLUXDB_CONFIG_PATH=/etc/influxdb2/influxdb.toml
+      - DOCKER_INFLUXDB_BOLT_PATH=/etc/influxdb2/influxdb.bolt
+      - DOCKER_INFLUXDB_ENGINE_PATH=/etc/influxdb2/engine
+      - INFLUXD_TLS_CERT=/etc/ssl/influxdb-selfsigned.crt
+      - INFLUXD_TLS_KEY=/etc/ssl/influxdb-selfsigned.key
+    ports:
+      - 8086:8086
+    restart: unless-stopped
+    profiles:
+      - database
+
+  historical-candles-collector:
+    build:
+      context: ..
+      dockerfile: docker/collector/Dockerfile
+    profiles:
+      - collector
+    volumes:
+      - ../cryptofeed-influxdb:/app/cryptofeed-influxdb
+      - ../conf:/app/conf
+    env_file:
+      - ./collector/.env
+      - ./collector/.env.secret
+    entrypoint: ["python", "cryptofeed-influxdb/collect_historical_candles.py", "-c"]
+    command: ["conf/collect_historical_candles/coinbase.yaml"]
+
+volumes:
+  influxdb-cryptofeed:
+  influxdb-cryptofeed-config:
+
+networks:
+  influxdb-cryptofeed:
+    driver: bridge
